@@ -53,3 +53,8 @@ plot(decompose(ts))
 ts <- msts(cleaned[,sum(sales_amount), by="purchase_date"]$V1, seasonal.periods=c(7,365.25), ts.frequency=7, start=c(2,3))
 plot(decompose(ts))
 
+cleaned %>% 
+  group_by(contact_id) %>%
+  summarise(sumSpend=sum(sales_amount, na.rm = T)) %>%
+  ungroup() %>%
+  summarise(CLV=mean(sumSpend))
