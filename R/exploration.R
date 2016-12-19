@@ -11,7 +11,7 @@ rapply(import,function(x) length(unique(x)))
 import %>% summarise(min(purchase_date), 
                      max(purchase_date))
 
-# Check some aspects
+# Check some aspects -------
 
 import %>% 
   group_by(contact_id) %>%
@@ -31,10 +31,12 @@ View(import %>%
 
 chisq.out.test(import$sales_amount,variance = var(import$sales_amount),opposite = FALSE)
 
+chisq.out.test(import$quantity,variance = var(import$quantity),opposite = FALSE)
+
 # as a result of chisq.test highest value 10997.5 is an outlier but visually make sense to set it to 3000. 
 # There are more artificial solutions for this but it makes sense.
 
-cleaned <- import %>% filter(quantity>0 & sales_amount < 3000 )
+cleaned <- import %>% filter(quantity>0 & quantity <= 50  & sales_amount < 3000 )
 
 ggplot(cleaned, aes(x=purchase_date, y=sales_amount)) + 
   geom_point(aes(colour = sales_amount))
@@ -50,18 +52,25 @@ ggplot(cleaned %>% group_by(purchase_date) %>% summarise(quantity=sum(quantity, 
   geom_line()
 
 
-ts.q <- msts(cleaned[,sum(quantity), by="purchase_date"]$V1, seasonal.periods=c(7,365.25), ts.frequency=7, start=c(2,3))
+cor.check <- cleaned
+
+
+
+cor.check <- NULL
+
+
+ts.t <- msts(cleaned[,uniqueN(order_id), by="purchase_date"]$V1, seasonal.periods=c(7,365.25), ts.frequency=7, start=c(2,3))
 plot(decompose(ts.q))
 
 ts.s <- msts(cleaned[,sum(sales_amount), by="purchase_date"]$V1, seasonal.periods=c(7,365.25), ts.frequency=7, start=c(2,3))
 plot(decompose(ts.s))
 
-fit <- tbats(ts.q)
+fit <- tbats(ts.t)
 
 fc <- forecast(fit, h = 365)
 
 stage <- cleaned
-stage[,quantity:=sum(quantity,na.rm = T), by="purchase_date"]
+stage[,transaction:=uniqueN(order_id), by="purchase_date"]
 
 ts.fc <- data.frame(purchase_date = seq(max(cleaned$purchase_date)+days(1) , length.out=length(fc$mean),by = 'day'))
 ts.fc$purchase_date <- ymd(ts.fc$purchase_date)
@@ -71,21 +80,76 @@ ts.fc$low80 <- fc$upper[,1]
 ts.fc$high95 <- fc$lower[,2]
 ts.fc$high80 <- fc$lower[,1]
 ts.fc.out <- bind_rows(stage, ts.fc)
-ts.fc.out$quantity <- ifelse(is.na(ts.fc.out$quantity),ts.fc.out$pred,ts.fc.out$quantity)
+ts.fc.out$quantity <- ifelse(is.na(ts.fc.out$transaction),ts.fc.out$pred,ts.fc.out$transaction)
 ts.fc.out$pred <- NULL
 stage <- NULL
 
-ggplot(melt(select(ts.fc.out, purchase_date, quantity, low80, low95, high80, high95), id.vars= c('purchase_date'), variable.name='forecast',value.name = "quantity" ), aes( purchase_date, quantity,group=forecast)) +   
+ggplot(melt(select(ts.fc.out, purchase_date, tranasction, low80, low95, high80, high95), id.vars= c('purchase_date'), variable.name='forecast',value.name = "transaction" ), aes( purchase_date, transaction,group=forecast)) +   
   geom_line(aes(color=forecast)) +
   ggtitle("Forecasted quantity") +
   labs(x="date") +
-  scale_colour_manual(name="Forecasts", values = c("quantity" = "#74BD56", "high95" = "#FF5600","low95" = "#FF5600", "high80" = "#123A4D", "low80" = "#123A4D"))
+  scale_colour_manual(name="Forecasts", values = c("transaction" = "#74BD56", "high95" = "#FF5600","low95" = "#FF5600", "high80" = "#123A4D", "low80" = "#123A4D"))
 
+ts.t <- NULL
+ts.s <- NULL
+
+# User metrics ------
 
 cleaned %>% 
   group_by(contact_id) %>%
   summarise(sumSpend=sum(sales_amount, na.rm = T)) %>%
   ungroup() %>%
   summarise(meanAmount=mean(sumSpend))
+
+cleaned %>% 
+  group_by(contact_id) %>%
+  summarise(sumQuantity=sum(quantity, na.rm = T)) %>%
+  ungroup() %>%
+  summarise(meanQuantitiy=mean(sumQuantity))
+
+
+
+# Cohorts --------
+
+firstVisits <- cleaned %>% 
+                  group_by(contact_id) %>%
+                  summarise(firstVisit=min(purchase_date))
+
+cohorts<- cleaned %>% 
+  left_join(firstVisits) %>%
+  mutate(isReturning = ifelse(purchase_date>firstVisit, T, F))
+
+cohorts[, cohort:=floor_date(firstVisit, unit = 'month')]
+cohorts[, seq:= interval(cohort,floor_date(purchase_date, unit = 'month')) %/% months(1)]
+
+cohorts %>%
+  group_by(cohort,seq) %>%
+  summarise(cnt = n_distinct(contact_id)) %>%
+  arrange(cohort, seq) %>%
+  dcast(cohort ~ seq, value.var = 'cnt')
+
+cohorts %>%
+  group_by(cohort,seq) %>%
+  summarise(cnt = n_distinct(order_id)) %>%
+  arrange(cohort, seq) %>%
+  dcast(cohort ~ seq, value.var = 'cnt')
+
+
+new <-cohorts %>% 
+  filter(isReturning == FALSE) %>%
+  group_by(cohort) %>%
+  summarise(new = n_distinct(contact_id)) %>%
+  arrange(cohort)
+
+clv <- cohorts %>%
+  group_by(cohort,seq) %>%
+  summarise(cnt = sum(sales_amount,na.rm = T)) %>%
+  left_join(new) %>%
+  mutate(clv=cnt/new) %>%
+  arrange(cohort, seq) %>%
+  dcast(cohort ~ seq, value.var = 'clv')
+
+View(clv)
+
 
 
