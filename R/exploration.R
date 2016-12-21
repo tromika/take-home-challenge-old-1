@@ -52,11 +52,6 @@ ggplot(cleaned %>% group_by(purchase_date) %>% summarise(quantity=sum(quantity, 
   geom_line()
 
 
-cor.check <- cleaned
-
-
-
-cor.check <- NULL
 
 
 ts.t <- msts(cleaned[,uniqueN(order_id), by="purchase_date"]$V1, seasonal.periods=c(7,365.25), ts.frequency=7, start=c(2,3))
@@ -80,11 +75,11 @@ ts.fc$low80 <- fc$upper[,1]
 ts.fc$high95 <- fc$lower[,2]
 ts.fc$high80 <- fc$lower[,1]
 ts.fc.out <- bind_rows(stage, ts.fc)
-ts.fc.out$quantity <- ifelse(is.na(ts.fc.out$transaction),ts.fc.out$pred,ts.fc.out$transaction)
+ts.fc.out$transaction <- ifelse(is.na(ts.fc.out$transaction),ts.fc.out$pred,ts.fc.out$transaction)
 ts.fc.out$pred <- NULL
 stage <- NULL
 
-ggplot(melt(select(ts.fc.out, purchase_date, tranasction, low80, low95, high80, high95), id.vars= c('purchase_date'), variable.name='forecast',value.name = "transaction" ), aes( purchase_date, transaction,group=forecast)) +   
+ggplot(melt(select(ts.fc.out, purchase_date, transaction, low80, low95, high80, high95), id.vars= c('purchase_date'), variable.name='forecast',value.name = "transaction" ), aes( purchase_date, transaction,group=forecast)) +   
   geom_line(aes(color=forecast)) +
   ggtitle("Forecasted quantity") +
   labs(x="date") +
@@ -106,6 +101,8 @@ cleaned %>%
   summarise(sumQuantity=sum(quantity, na.rm = T)) %>%
   ungroup() %>%
   summarise(meanQuantitiy=mean(sumQuantity))
+
+
 
 
 
@@ -150,6 +147,16 @@ clv <- cohorts %>%
   dcast(cohort ~ seq, value.var = 'clv')
 
 View(clv)
+View(new)
 
+plot(new)
+
+cohorts %>% 
+  filter(isReturning == T) %>%
+  group_by(order_id, contact_id) %>%
+  summarise(sales_amount=sum(sales_amount, na.rm = T)) %>%
+  ungroup() %>%
+  group_by(contact_id) %>%
+  summarise(sum(sales_amount, na.rm = T)/n(), n())
 
 
