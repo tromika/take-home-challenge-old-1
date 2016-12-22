@@ -1,0 +1,4 @@
+# Requirements
+
+lifetimes
+pandas >= 0.19.1
