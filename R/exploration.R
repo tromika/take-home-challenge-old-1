@@ -159,4 +159,13 @@ cohorts %>%
   group_by(contact_id) %>%
   summarise(sum(sales_amount, na.rm = T)/n(), n())
 
+##########
+#training set
+#########
 
+train <- cohorts 
+train.0 <- train %>% group_by(contact_id) %>%
+  summarise(freq=n(), sumQuantity=sum(quantity), sumSalesAmount=sum(sales_amount))
+
+hist((train.0 %>% filter(freq < 50))$freq, breaks = 50)
+hist(train.0$sumSalesAmount)
