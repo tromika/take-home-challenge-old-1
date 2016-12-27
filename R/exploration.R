@@ -138,13 +138,13 @@ new <-cohorts %>%
   summarise(new = n_distinct(contact_id)) %>%
   arrange(cohort)
 
-clv <- cohorts %>%
+arpu <- cohorts %>%
   group_by(cohort,seq) %>%
   summarise(cnt = sum(sales_amount,na.rm = T)) %>%
   left_join(new) %>%
-  mutate(clv=cnt/new) %>%
+  mutate(arpu=cnt/new) %>%
   arrange(cohort, seq) %>%
-  dcast(cohort ~ seq, value.var = 'clv')
+  dcast(cohort ~ seq, value.var = 'arpu')
 
 View(clv)
 View(new)
