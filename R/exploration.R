@@ -11,6 +11,10 @@ rapply(import,function(x) length(unique(x)))
 import %>% summarise(min(purchase_date), 
                      max(purchase_date))
 
+quantile(import$sales_amount, c(.85, .90, .99995)) 
+
+quantile(import$quantity, c(.85, .90, .9999)) 
+
 # Check some aspects -------
 
 import %>% 
