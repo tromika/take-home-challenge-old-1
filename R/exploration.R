@@ -97,6 +97,13 @@ cleaned %>%
   summarise(meanAmount=mean(sumSpend))
 
 cleaned %>% 
+  group_by(contact_id, year(purchase_date)) %>%
+  summarise(sumSpend=sum(sales_amount, na.rm = T)) %>%
+  ungroup() %>%
+  group_by(`year(purchase_date)`) %>%
+  summarise(meanAmount=mean(sumSpend))
+
+cleaned %>% 
   group_by(contact_id) %>%
   summarise(sumQuantity=sum(quantity, na.rm = T)) %>%
   ungroup() %>%
@@ -158,6 +165,14 @@ cohorts %>%
   ungroup() %>%
   group_by(contact_id) %>%
   summarise(sum(sales_amount, na.rm = T)/n(), n())
+
+cohorts %>% filter(isReturning=T) %>%
+  group_by(purchase_date) %>%
+  summarise(newVisitors=n()) %>%
+  ungroup() %>%
+  ggplot(., aes(purchase_date,newVisitors)) + geom_line()
+
+
 
 ##########
 #training set
