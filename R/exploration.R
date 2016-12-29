@@ -37,7 +37,7 @@ chisq.out.test(import$sales_amount,variance = var(import$sales_amount),opposite 
 
 chisq.out.test(import$quantity,variance = var(import$quantity),opposite = FALSE)
 
-# as a result of chisq.test highest value 10997.5 is an outlier but visually make sense to set it to 3000. 
+# as a result of chisq.test highest value 10997.5 is the highest outlier but visually make sense to set it to 3000. 
 # There are more artificial solutions for this but it makes sense.
 
 cleaned <- import %>% filter(quantity>0 & quantity <= 50  & sales_amount < 3000 )
@@ -56,7 +56,11 @@ ggplot(cleaned %>% group_by(purchase_date) %>% summarise(quantity=sum(quantity, 
   geom_line()
 
 
-
+#######
+# Frequentist method to estimate sales_amount in the next year with time series fc
+# Using the TBATS model to forecast the sales_amount
+# More info about the model: https://cran.r-project.org/web/packages/forecast/forecast.pdf
+#######
 
 ts.t <- msts(cleaned[,uniqueN(order_id), by="purchase_date"]$V1, seasonal.periods=c(7,365.25), ts.frequency=7, start=c(2,3))
 plot(decompose(ts.q))
@@ -89,8 +93,39 @@ ggplot(melt(select(ts.fc.out, purchase_date, transaction, low80, low95, high80, 
   labs(x="date") +
   scale_colour_manual(name="Forecasts", values = c("transaction" = "#74BD56", "high95" = "#FF5600","low95" = "#FF5600", "high80" = "#123A4D", "low80" = "#123A4D"))
 
+fit <- tbats(ts.s)
+
+fc <- forecast(fit, h = 365)
+
+stage <- cleaned
+stage[,sales_amount:=sum(sales_amount), by="purchase_date"]
+
+ts.fc <- data.frame(purchase_date = seq(max(cleaned$purchase_date)+days(1) , length.out=length(fc$mean),by = 'day'))
+ts.fc$purchase_date <- ymd(ts.fc$purchase_date)
+ts.fc$pred <- fc$mean
+ts.fc$low95 <- fc$upper[,2]
+ts.fc$low80 <- fc$upper[,1]
+ts.fc$high95 <- fc$lower[,2]
+ts.fc$high80 <- fc$lower[,1]
+ts.fc.out <- bind_rows(stage, ts.fc)
+ts.fc.out$sales_amount <- ifelse(is.na(ts.fc.out$sales_amount),ts.fc.out$pred,ts.fc.out$sales_amount)
+ts.fc.out$pred <- NULL
+stage <- NULL
+
+ggplot(melt(select(ts.fc.out, purchase_date, sales_amount, low80, low95, high80, high95), id.vars= c('purchase_date'), variable.name='forecast',value.name = "sales_amount" ), aes( purchase_date, sales_amount,group=forecast)) +   
+  geom_line(aes(color=forecast)) +
+  ggtitle("Forecasted monetary") +
+  labs(x="date") +
+  scale_colour_manual(name="Forecasts", values = c("sales_amount" = "#74BD56", "high95" = "#FF5600","low95" = "#FF5600", "high80" = "#123A4D", "low80" = "#123A4D"))
+
+
 ts.t <- NULL
 ts.s <- NULL
+
+
+select(ts.fc.out, purchase_date, sales_amount, low80, low95, high80, high95) %>%
+  filter(purchase_date <= '2014-12-31' & purchase_date >= '2014-01-01') %>%
+  summarise_each( funs(sum(., na.rm = T)), sales_amount, low80, low95, high80, high95)
 
 # User metrics ------
 
@@ -179,7 +214,7 @@ cohorts %>% filter(isReturning=T) %>%
 
 
 ##########
-#training set
+#training set testing
 #########
 
 train <- cohorts 
