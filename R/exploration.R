@@ -123,9 +123,16 @@ ts.t <- NULL
 ts.s <- NULL
 
 
+# Generate expectations for testing
+
 select(ts.fc.out, purchase_date, sales_amount, low80, low95, high80, high95) %>%
   filter(purchase_date <= '2014-12-31' & purchase_date >= '2014-01-01') %>%
   summarise_each( funs(sum(., na.rm = T)), sales_amount, low80, low95, high80, high95)
+
+select(ts.fc.out, purchase_date, sales_amount, low80, low95, high80, high95) %>%
+  filter(purchase_date <= '2014-01-31' & purchase_date >= '2014-01-01') %>%
+  summarise_each( funs(sum(., na.rm = T)), sales_amount, low80, low95, high80, high95)
+
 
 # User metrics ------
 
@@ -178,8 +185,14 @@ cohorts %>%
   dcast(cohort ~ seq, value.var = 'cnt')
 
 
-new <-cohorts %>% 
+new.visitors <-cohorts %>% 
   filter(isReturning == FALSE) %>%
+  group_by(cohort) %>%
+  summarise(new = n_distinct(contact_id)) %>%
+  arrange(cohort)
+
+ret.visitors <- cohorts %>% 
+  filter(isReturning == TRUE) %>%
   group_by(cohort) %>%
   summarise(new = n_distinct(contact_id)) %>%
   arrange(cohort)
@@ -192,10 +205,6 @@ arpu <- cohorts %>%
   arrange(cohort, seq) %>%
   dcast(cohort ~ seq, value.var = 'arpu')
 
-View(clv)
-View(new)
-
-plot(new)
 
 cohorts %>% 
   filter(isReturning == T) %>%
@@ -205,7 +214,7 @@ cohorts %>%
   group_by(contact_id) %>%
   summarise(sum(sales_amount, na.rm = T)/n(), n())
 
-cohorts %>% filter(isReturning=T) %>%
+cohorts %>% filter(isReturning=F) %>%
   group_by(purchase_date) %>%
   summarise(newVisitors=n()) %>%
   ungroup() %>%
@@ -214,12 +223,30 @@ cohorts %>% filter(isReturning=T) %>%
 
 
 ##########
-#training set testing
+#training set -- single visitors
 #########
 
-train <- cohorts 
-train.0 <- train %>% group_by(contact_id) %>%
-  summarise(freq=n(), sumQuantity=sum(quantity), sumSalesAmount=sum(sales_amount))
+Visits <- cleaned %>% 
+  group_by(contact_id) %>%
+  summarise(firstVisit=min(purchase_date),lastVisit=max(purchase_date), spend=sum(sales_amount, na.rm = T))
 
-hist((train.0 %>% filter(freq < 50))$freq, breaks = 50)
-hist(train.0$sumSalesAmount)
+single.visitors<-Visits %>% mutate(single=ifelse(firstVisit==lastVisit,T,F))
+
+single.visitors %>%
+  filter(single==T) %>%
+  group_by(firstVisit) %>%
+  summarise(cnt=n(), spend = sum(spend), spendPvistor=sum(spend)/n()) %>%
+  arrange(firstVisit) %>%
+  ggplot(., aes(firstVisit, cnt)) +
+  geom_line()
+
+single.visitors.visits<-single.visitors %>%
+  filter(single==T) %>%
+  group_by(firstVisit) %>%
+  summarise(cnt=n(), spend = sum(spend), spendPvistor=sum(spend)/n()) %>%
+  arrange(firstVisit) 
+
+cor(single.visitors.visits$cnt,single.visitors.visits$spend)
+
+single.visitors.visits %>% filter(firstVisit <= '2013-01-31' & firstVisit >= '2013-01-01') %>%
+  summarise(sum(spend))
