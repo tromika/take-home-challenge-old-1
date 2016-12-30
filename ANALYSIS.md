@@ -5,7 +5,7 @@
 
 Assumption it's an eCommerce business based on the transactions.
 Right after the first moment it was obvious there is a decreasing trend so there is a room for improvement and the returning customers are valueable.
-TODO predictions
+
 
 All the transactions are really skewed considering the amount and quantity also. This is really typical to eCommerce and we have to handle all the outliers to build a reliable model to predict any CLV related metric.
 
@@ -14,7 +14,7 @@ All the transactions are really skewed considering the amount and quantity also.
 It's obvious the upcoming trend is slightly decreasing so the expected monetary values probably will be lower.
 I've created a TBATS model to forecast the sales amount numbers to have a high level estimate.
 
-TODO picture
+![alt tag](https://gitlab.metricbrew.com/tamas.szuromi/emarsys-takehome-challenge/raw/master/plots/fc-monetary.png)
 
 # 1,087,639
 
@@ -38,14 +38,14 @@ The first coin determines if the customer lives or dies
 (e.g. forgets about your business).   
 The second coin determines if she buys or not.   
 
-There are many models out there to use to this problem.  
-For the live/die problem there is the Buy Til You Die library in R and the https://github.com/CamDavidsonPilon/lifetimes for Python.
+There are many models out there to use to this problem.    
+For the live/die problem there is the Buy Til You Die library in R and the https://github.com/CamDavidsonPilon/lifetimes for Python.  
 
-After few quick tests with the MBG/NBD model was the best performing on the training test. The python implementation was a bit different and much easier to use so I moved on with the python package.
+After few quick tests with the MBG/NBD model was the best performing on the training test. The python implementation was a bit different and much easier to use so I moved on with the python package.   
 
-The model's implementation with commentary can be found in the CLV notebook.
+The model's implementation with commentary can be found in the CLV notebook.   
 
-The final model could be tested in the modelPred notebook with the given function easily.
+The final model could be tested in the modelPred notebook with the given function easily.   
 
 ### 5. Model's summary
 
@@ -71,15 +71,15 @@ point at which the customer “drops out” is distributed across transactions a
 
 #### R part
 
-In the R/init.R you can check the required packages and assets for the R/exploration.R. It's also install/update the required packages.
+In the R/init.R you can check the required packages and assets for the R/exploration.R. It's also install/update the required packages.   
 
 The exploration.R is just a dump of the exploratory analysis part.
 
 #### Python part
 
-For the python part anaconda installation is recommended because it has most of the packages.
+For the python part anaconda installation is recommended because it has most of the packages.   
 If needed you can download it here: https://www.continuum.io/downloads  
 
-Maybe you need some extra packages to install what could be need to run the notebooks. So with pip install -r python/requirements.txt you can install/update the requirements.
+Maybe you need some extra packages to install what could be need to run the notebooks. So with pip install -r python/requirements.txt you can install/update the requirements.   
 
 The best way to check the files is to use jupyter notebooks. In a command line just hit jupyter notebook and navigate to the python dir in the repository.

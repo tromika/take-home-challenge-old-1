@@ -6,8 +6,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-#General
-*.csv
+
 
 #R
 # History files
@@ -43,5 +42,3 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
-
-
